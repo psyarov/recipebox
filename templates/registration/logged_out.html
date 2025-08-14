@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Logged out · RecipeBox{% endblock %}
+{% block content %}
+  <div class="bg-white p-4 rounded-3 shadow-sm">
+    <p>You have been logged out.</p>
+    <a href="{% url 'login' %}">Login again</a>
+  </div>
+{% endblock %}

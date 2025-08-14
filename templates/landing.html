@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Home · RecipeBox{% endblock %}
+{% block content %}
+  <div class="p-5 mb-4 bg-white rounded-3 shadow-sm">
+    <div class="container-fluid py-5">
+      <h1 class="display-5 fw-bold">Welcome to RecipeBox</h1>
+      <p class="col-md-8 fs-5">Discover and share your favorite recipes.</p>
+      {% if not user.is_authenticated %}
+        <a href="{% url 'register' %}" class="btn btn-primary btn-lg">Get Started</a>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}
