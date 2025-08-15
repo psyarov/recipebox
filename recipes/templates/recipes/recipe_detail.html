@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.title }} · RecipeBox{% endblock %}
+{% block content %}
+  <article class="bg-white p-4 rounded-3 shadow-sm">
+    <header class="mb-3">
+      <h2 class="mb-1">{{ recipe.title }}</h2>
+      <div class="text-muted">
+        {% if recipe.category %}Category: {{ recipe.category.name }} · {% endif %}
+        by {{ recipe.author.username }} · {{ recipe.prep_time_minutes }} min
+      </div>
+    </header>
+    {% if recipe.image_url %}
+      <img class="img-fluid rounded mb-3" src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+    {% endif %}
+    <p class="fs-5">{{ recipe.description|linebreaks }}</p>
+  </article>
+{% endblock %}
