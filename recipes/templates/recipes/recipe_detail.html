@@ -21,5 +21,55 @@
       <img class="img-fluid rounded mb-3" src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
     {% endif %}
     <p class="fs-5">{{ recipe.description|linebreaks }}</p>
+
+    <!-- ⬇️ Paste the comments section here, before </article> -->
+    <hr class="my-4">
+
+    <section>
+      <h4 class="mb-3">Comments</h4>
+
+      {% if recipe.comments.all %}
+        <div class="list-group mb-3">
+          {% for c in recipe.comments.all %}
+            <div class="list-group-item">
+              <div class="d-flex justify-content-between">
+                <strong>{{ c.author.username }}</strong>
+                <small class="text-muted">{{ c.created_at|date:"Y-m-d H:i" }}</small>
+              </div>
+              <div>{{ c.text|linebreaks }}</div>
+
+              {% if user.is_authenticated and user == c.author %}
+                <div class="mt-2">
+                  <a class="btn btn-sm btn-outline-danger" href="{% url 'comment_delete' pk=c.pk %}">Delete</a>
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted">No comments yet.</p>
+      {% endif %}
+
+      {% if user.is_authenticated %}
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">Add a comment</h5>
+            <form method="post" action="{% url 'comment_create' slug=recipe.slug %}">
+              {% csrf_token %}
+              <div class="mb-3">
+                <textarea name="text" rows="3" class="form-control" required placeholder="Write your comment..."></textarea>
+              </div>
+              <button class="btn btn-primary">Post comment</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-info mt-3">
+          <a href="{% url 'login' %}">Log in</a> to add a comment.
+        </div>
+      {% endif %}
+    </section>
+    <!-- ⬆️ End comments section -->
+
   </article>
 {% endblock %}

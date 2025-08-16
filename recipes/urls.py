@@ -28,13 +28,18 @@ urlpatterns = [
     # Public CBVs
     path("recipes/", views.RecipeListView.as_view(), name="recipe_list"),
 
-    # ---- fixed string routes must come BEFORE the slug route ----
+    # Private routes BEFORE slug detail
     path("recipes/create/", views.RecipeCreateView.as_view(), name="recipe_create"),
     path("recipes/<slug:slug>/edit/", views.RecipeUpdateView.as_view(), name="recipe_edit"),
     path("recipes/<slug:slug>/delete/", views.RecipeDeleteView.as_view(), name="recipe_delete"),
-    # -------------------------------------------------------------
+    path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
+    path("recipes/<slug:slug>/comment/", views.CommentCreateView.as_view(), name="comment_create"),
+    path("comments/<int:pk>/delete/", views.CommentDeleteView.as_view(), name="comment_delete"),
 
+    # Slug detail last
     path("recipes/<slug:slug>/", views.RecipeDetailView.as_view(), name="recipe_detail"),
+
     path("categories/", views.CategoryListView.as_view(), name="category_list"),
 ]
+
 

@@ -3,14 +3,18 @@ from django.contrib.auth import login
 from django.shortcuts import render, redirect
 from django.views.generic import ListView, DetailView
 
-from .forms import RegisterForm
+from .forms import RegisterForm, RecipeForm, CommentForm
 from .models import Recipe, Category
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView
 from .forms import RecipeForm
-from .models import Recipe, Category
+from .models import Recipe, Category, Comment
+
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_protect
+
 
 
 
@@ -115,5 +119,59 @@ class RecipeDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         messages.success(self.request, "Recipe deleted successfully.")
+        return super().delete(request, *args, **kwargs)
+
+
+class DashboardView(LoginRequiredMixin, ListView):
+    model = Recipe
+    template_name = "recipes/dashboard.html"
+    context_object_name = "recipes"
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Recipe.objects.filter(author=self.request.user).select_related("category")
+
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = "recipes/comment_form.html"  # we’ll reuse a simple form template
+
+    @method_decorator(csrf_protect)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def form_valid(self, form):
+        recipe = Recipe.objects.get(slug=self.kwargs["slug"])
+        form.instance.recipe = recipe
+        form.instance.author = self.request.user
+        messages.success(self.request, "Comment added.")
+        response = super().form_valid(form)
+        # Always redirect to the recipe detail
+        return redirect(recipe.get_absolute_url())
+
+    def get_success_url(self):
+        # Not used due to redirect in form_valid, but kept for safety
+        return self.object.recipe.get_absolute_url()
+
+
+class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Comment
+    template_name = "recipes/comment_confirm_delete.html"
+
+    def test_func(self):
+        return self.get_object().author == self.request.user
+
+    def handle_no_permission(self):
+        messages.error(self.request, "You do not have permission to delete this comment.")
+        return redirect(self.get_object().recipe.get_absolute_url())
+
+    # ✅ Tell DeleteView where to go after success
+    def get_success_url(self):
+        return self.object.recipe.get_absolute_url()
+
+    # (Optional) add a success message and call the parent delete
+    def delete(self, request, *args, **kwargs):
+        self.object = self.get_object()           # make sure self.object is set for get_success_url()
+        messages.success(self.request, "Comment deleted.")
         return super().delete(request, *args, **kwargs)
 
