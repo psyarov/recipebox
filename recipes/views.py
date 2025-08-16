@@ -6,6 +6,13 @@ from django.views.generic import ListView, DetailView
 from .forms import RegisterForm
 from .models import Recipe, Category
 
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, UpdateView, DeleteView
+from .forms import RecipeForm
+from .models import Recipe, Category
+
+
 
 def landing_view(request):
     return render(request, "landing.html")
@@ -57,3 +64,56 @@ class CategoryListView(ListView):
     template_name = "recipes/category_list.html"
     context_object_name = "categories"
     ordering = ["name"]
+
+
+class RecipeCreateView(LoginRequiredMixin, CreateView):
+    model = Recipe
+    form_class = RecipeForm
+    template_name = "recipes/recipe_form.html"
+
+    def form_valid(self, form):
+        # Assign current user as author
+        form.instance.author = self.request.user
+        messages.success(self.request, "Recipe created successfully.")
+        return super().form_valid(form)
+
+
+class RecipeUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Recipe
+    form_class = RecipeForm
+    template_name = "recipes/recipe_form.html"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+    def handle_no_permission(self):
+        messages.error(self.request, "You do not have permission to edit this recipe.")
+        return redirect("recipe_detail", slug=self.get_object().slug)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Recipe updated successfully.")
+        return super().form_valid(form)
+
+
+class RecipeDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Recipe
+    template_name = "recipes/recipe_confirm_delete.html"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
+    success_url = reverse_lazy("recipe_list")
+
+    def test_func(self):
+        obj = self.get_object()
+        return obj.author == self.request.user
+
+    def handle_no_permission(self):
+        messages.error(self.request, "You do not have permission to delete this recipe.")
+        return redirect("recipe_detail", slug=self.get_object().slug)
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, "Recipe deleted successfully.")
+        return super().delete(request, *args, **kwargs)
+
