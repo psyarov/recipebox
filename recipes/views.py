@@ -8,12 +8,14 @@ from .models import Recipe, Category
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView, DeleteView
+from django.views.generic import CreateView, UpdateView, DeleteView, TemplateView
 from .forms import RecipeForm
 from .models import Recipe, Category, Comment
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
+
+from django.contrib.auth.decorators import login_required
 
 
 
@@ -175,3 +177,28 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         messages.success(self.request, "Comment deleted.")
         return super().delete(request, *args, **kwargs)
 
+
+# @method_decorator(login_required, name="dispatch")
+# class DashboardView(TemplateView):
+#     template_name = "recipes/dashboard.html"
+#
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context["recipes"] = Recipe.objects.filter(author=self.request.user)
+#         context["comments"] = Comment.objects.filter(author=self.request.user)
+#         return context
+
+class DashboardView(LoginRequiredMixin, ListView):
+    model = Recipe
+    template_name = "recipes/dashboard.html"
+    context_object_name = "recipes"
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Recipe.objects.filter(author=self.request.user).select_related("category")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # add user's comments to the context so the template can render them
+        context["comments"] = Comment.objects.filter(author=self.request.user).select_related("recipe")
+        return context

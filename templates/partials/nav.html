@@ -12,6 +12,10 @@
                 <li class="nav-item"><a class="nav-link" href="{% url 'recipe_list' %}">Recipes</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'category_list' %}">Categories</a></li>
                 <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
+
+                {% if user.is_authenticated %}
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
+                {% endif %}
             </ul>
 
             <ul class="navbar-nav ms-auto">
@@ -20,8 +24,12 @@
                         <span class="navbar-text me-2">Hi, {{ user.username }}!</span>
                     </li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Logout</a></li>
-                {% else %}
+                    <li class="nav-item">
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link btn btn-link p-0">Logout</button>
+                        </form>
+                    </li>                {% else %}
                     <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Register</a></li>
                 {% endif %}

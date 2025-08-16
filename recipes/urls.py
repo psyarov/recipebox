@@ -19,6 +19,7 @@
 
 from django.urls import path
 from . import views
+from .views import DashboardView
 
 urlpatterns = [
     path("", views.landing_view, name="landing"),
@@ -40,6 +41,9 @@ urlpatterns = [
     path("recipes/<slug:slug>/", views.RecipeDetailView.as_view(), name="recipe_detail"),
 
     path("categories/", views.CategoryListView.as_view(), name="category_list"),
+
+    path("dashboard/", DashboardView.as_view(), name="dashboard"),
+
 ]
 
 
