@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.urls import reverse
+from django.core.validators import MinValueValidator
+
 
 
 class Category(models.Model):
@@ -30,13 +32,16 @@ class Ingredient(models.Model):
         return self.name
 
 
+from django.core.validators import MinValueValidator
+# ...existing imports...
+
 class Recipe(models.Model):
-    title = models.CharField(max_length=200)
-    slug = models.SlugField(max_length=220, unique=True)
+    title = models.CharField(max_length=200, db_index=True)
+    slug = models.SlugField(max_length=220, unique=True, db_index=True)
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name="recipes")
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField()
-    prep_time_minutes = models.PositiveIntegerField()
+    prep_time_minutes = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     image_url = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -48,7 +53,8 @@ class Recipe(models.Model):
         return self.title
 
     def clean(self):
-        if self.prep_time_minutes <= 0:
+        # double safety; form validator already ensures >=1 via MinValueValidator
+        if self.prep_time_minutes is not None and self.prep_time_minutes <= 0:
             raise ValidationError("Preparation time must be greater than zero.")
 
     def get_absolute_url(self):
@@ -62,11 +68,18 @@ class RecipeIngredient(models.Model):
     unit = models.CharField(max_length=50, blank=True)
 
     class Meta:
-        unique_together = ("recipe", "ingredient")
+        # keep the legacy constraint but give it a name (better admin/errors)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipe", "ingredient"],
+                name="unique_recipe_ingredient"
+            )
+        ]
         ordering = ["ingredient__name"]
 
     def __str__(self):
         return f"{self.quantity} {self.unit} {self.ingredient.name}"
+
 
 
 class Comment(models.Model):

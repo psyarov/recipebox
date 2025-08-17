@@ -3,7 +3,7 @@ from django.contrib.auth import login
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
 
-from .forms import RegisterForm, RecipeForm, CommentForm
+from .forms import RegisterForm, RecipeForm, CommentForm, SearchForm, CategoryForm
 from .models import Recipe, Category
 
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -16,6 +16,11 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 
 from django.contrib.auth.decorators import login_required
+
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+
+from django.db.models import Q
+
 
 
 
@@ -45,18 +50,27 @@ def register_view(request):
     return render(request, "registration/register.html", {"form": form})
 
 
+
 class RecipeListView(ListView):
     model = Recipe
     template_name = "recipes/recipe_list.html"
     context_object_name = "recipes"
-    paginate_by = 10  # simple pagination
+    paginate_by = 10
 
     def get_queryset(self):
         qs = super().get_queryset().select_related("author", "category")
-        q = self.request.GET.get("q")
-        if q:
-            qs = qs.filter(title__icontains=q) | qs.filter(description__icontains=q)
+        self.search_form = SearchForm(self.request.GET or None)
+        if self.search_form.is_valid():
+            q = self.search_form.cleaned_data.get("q")
+            if q:
+                qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
         return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["search_form"] = getattr(self, "search_form", SearchForm())
+        return ctx
+
 
 
 class RecipeDetailView(DetailView):
@@ -224,4 +238,23 @@ class CategoryDetailView(ListView):
         ctx = super().get_context_data(**kwargs)
         ctx["category"] = self.category
         return ctx
+
+class StaffRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return self.request.user.is_staff or self.request.user.is_superuser
+
+    def handle_no_permission(self):
+        messages.error(self.request, "You do not have permission to access this page.")
+        return redirect("landing")
+
+
+class CategoryCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
+    model = Category
+    form_class = CategoryForm
+    template_name = "recipes/category_form.html"
+    success_url = reverse_lazy("category_list")
+
+    def form_valid(self, form):
+        messages.success(self.request, "Category created successfully.")
+        return super().form_valid(form)
 
