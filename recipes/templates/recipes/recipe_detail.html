@@ -1,75 +1,93 @@
 {% extends "base.html" %}
 {% block title %}{{ recipe.title }} · RecipeBox{% endblock %}
 {% block content %}
-  <article class="bg-white p-4 rounded-3 shadow-sm">
-    <header class="mb-3">
-      <h2 class="mb-1">{{ recipe.title }}</h2>
-      <div class="text-muted">
-        {% if recipe.category %}Category: <a href="{{ recipe.category.get_absolute_url }}">{{ recipe.category.name }}</a> · {% endif %}
-        by {{ recipe.author.username }} · {{ recipe.prep_time_minutes }} min
-      </div>
-    </header>
-
-    {% if user.is_authenticated and user == recipe.author %}
-      <div class="mb-3">
-        <a class="btn btn-sm btn-outline-primary" href="{% url 'recipe_edit' slug=recipe.slug %}">Edit</a>
-        <a class="btn btn-sm btn-outline-danger" href="{% url 'recipe_delete' slug=recipe.slug %}">Delete</a>
-      </div>
-    {% endif %}
-
-    {% if recipe.image_url %}
-      <img class="img-fluid rounded mb-3" src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
-    {% endif %}
-    <p class="fs-5">{{ recipe.description|linebreaks }}</p>
-
-    <!-- ⬇️ Paste the comments section here, before </article> -->
-    <hr class="my-4">
-
-    <section>
-      <h4 class="mb-3">Comments</h4>
-
-      {% if recipe.comments.all %}
-        <div class="list-group mb-3">
-          {% for c in recipe.comments.all %}
-            <div class="list-group-item">
-              <div class="d-flex justify-content-between">
-                <strong>{{ c.author.username }}</strong>
-                <small class="text-muted">{{ c.created_at|date:"Y-m-d H:i" }}</small>
-              </div>
-              <div>{{ c.text|linebreaks }}</div>
-
-              {% if user.is_authenticated and user == c.author %}
-                <div class="mt-2">
-                  <a class="btn btn-sm btn-outline-danger" href="{% url 'comment_delete' pk=c.pk %}">Delete</a>
-                </div>
-              {% endif %}
+    <article class="bg-white p-4 rounded-3 shadow-sm">
+        <header class="mb-3">
+            <h2 class="mb-1">{{ recipe.title }}</h2>
+            <div class="text-muted">
+                {% if recipe.category %}Category:
+                    <a href="{{ recipe.category.get_absolute_url }}">{{ recipe.category.name }}</a> · {% endif %}
+                by {{ recipe.author.username }} · {{ recipe.prep_time_minutes }} min
             </div>
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="text-muted">No comments yet.</p>
-      {% endif %}
+        </header>
 
-      {% if user.is_authenticated %}
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">Add a comment</h5>
-            <form method="post" action="{% url 'comment_create' slug=recipe.slug %}">
-              {% csrf_token %}
-              <div class="mb-3">
-                <textarea name="text" rows="3" class="form-control" required placeholder="Write your comment..."></textarea>
-              </div>
-              <button class="btn btn-primary">Post comment</button>
-            </form>
-          </div>
-        </div>
-      {% else %}
-        <div class="alert alert-info mt-3">
-          <a href="{% url 'login' %}">Log in</a> to add a comment.
-        </div>
-      {% endif %}
-    </section>
-    <!-- ⬆️ End comments section -->
+        {% if user.is_authenticated and user == recipe.author %}
+            <div class="mb-3">
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'recipe_edit' slug=recipe.slug %}">Edit</a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'recipe_delete' slug=recipe.slug %}">Delete</a>
+            </div>
+        {% endif %}
 
-  </article>
+        {% if recipe.image_url %}
+            <img class="img-fluid rounded mb-3" src="{{ recipe.image_url }}" alt="{{ recipe.title }}">
+        {% endif %}
+        <p class="fs-5">{{ recipe.description|linebreaks }}</p>
+        {% if recipe.recipeingredient_set.all %}
+            <hr class="my-4">
+            <section>
+                <h4 class="mb-3">Ingredients</h4>
+                <ul class="list-group">
+                    {% for ri in recipe.recipeingredient_set.all %}
+                        <li class="list-group-item">
+                            {% if ri.quantity %}{{ ri.quantity }} {% endif %}
+                            {% if ri.unit %}{{ ri.unit }} {% endif %}
+                            {{ ri.ingredient.name }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+
+        <!-- ⬇️ Paste the comments section here, before </article> -->
+        <hr class="my-4">
+
+        <section>
+            <h4 class="mb-3">Comments</h4>
+
+            {% if recipe.comments.all %}
+                <div class="list-group mb-3">
+                    {% for c in recipe.comments.all %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ c.author.username }}</strong>
+                                <small class="text-muted">{{ c.created_at|date:"Y-m-d H:i" }}</small>
+                            </div>
+                            <div>{{ c.text|linebreaks }}</div>
+
+                            {% if user.is_authenticated and user == c.author %}
+                                <div class="mt-2">
+                                    <a class="btn btn-sm btn-outline-danger" href="{% url 'comment_delete' pk=c.pk %}">Delete</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No comments yet.</p>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Add a comment</h5>
+                        <form method="post" action="{% url 'comment_create' slug=recipe.slug %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <textarea name="text" rows="3" class="form-control" required
+                                          placeholder="Write your comment..."></textarea>
+                            </div>
+                            <button class="btn btn-primary">Post comment</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-info mt-3">
+                    <a href="{% url 'login' %}">Log in</a> to add a comment.
+                </div>
+            {% endif %}
+        </section>
+        <!-- ⬆️ End comments section -->
+
+    </article>
 {% endblock %}

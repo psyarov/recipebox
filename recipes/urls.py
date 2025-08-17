@@ -37,6 +37,8 @@ urlpatterns = [
     path("recipes/<slug:slug>/comment/", views.CommentCreateView.as_view(), name="comment_create"),
     path("comments/<int:pk>/delete/", views.CommentDeleteView.as_view(), name="comment_delete"),
 
+    path("ingredients/create/", views.IngredientCreateView.as_view(), name="ingredient_create"),
+
     # Slug detail last
     path("recipes/<slug:slug>/", views.RecipeDetailView.as_view(), name="recipe_detail"),
 

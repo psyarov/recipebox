@@ -9,8 +9,7 @@ from .models import Recipe, Category
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DeleteView, TemplateView
-from .forms import RecipeForm
-from .models import Recipe, Category, Comment
+from .models import Recipe, Category, Comment, RecipeIngredient, Ingredient
 
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
@@ -20,6 +19,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
 from django.db.models import Q
+
+from .forms import RegisterForm, RecipeForm, CommentForm, SearchForm, CategoryForm, RecipeIngredientFormSet, IngredientForm
+
 
 
 
@@ -55,7 +57,7 @@ class RecipeListView(ListView):
     model = Recipe
     template_name = "recipes/recipe_list.html"
     context_object_name = "recipes"
-    paginate_by = 10
+    paginate_by = 5
 
     def get_queryset(self):
         qs = super().get_queryset().select_related("author", "category")
@@ -64,7 +66,7 @@ class RecipeListView(ListView):
             q = self.search_form.cleaned_data.get("q")
             if q:
                 qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
-        return qs
+        return qs.order_by("-created_at")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -93,11 +95,30 @@ class RecipeCreateView(LoginRequiredMixin, CreateView):
     form_class = RecipeForm
     template_name = "recipes/recipe_form.html"
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        if self.request.method == "POST":
+            ctx["ingredient_formset"] = RecipeIngredientFormSet(self.request.POST)
+        else:
+            ctx["ingredient_formset"] = RecipeIngredientFormSet()
+        return ctx
+
     def form_valid(self, form):
-        # Assign current user as author
-        form.instance.author = self.request.user
-        messages.success(self.request, "Recipe created successfully.")
-        return super().form_valid(form)
+        # Save recipe with current user
+        self.object = form.save(commit=False)
+        self.object.author = self.request.user
+        self.object.save()
+        form.save_m2m()
+
+        # Bind and validate formset against this recipe
+        formset = RecipeIngredientFormSet(self.request.POST, instance=self.object)
+        if formset.is_valid():
+            formset.save()
+            messages.success(self.request, "Recipe created successfully.")
+            return redirect(self.object.get_absolute_url())
+        # if formset has errors, re-render the page with errors
+        return self.render_to_response(self.get_context_data(form=form, ingredient_formset=formset))
+
 
 
 class RecipeUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -108,16 +129,29 @@ class RecipeUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     slug_url_kwarg = "slug"
 
     def test_func(self):
-        obj = self.get_object()
-        return obj.author == self.request.user
+        return self.get_object().author == self.request.user
 
     def handle_no_permission(self):
         messages.error(self.request, "You do not have permission to edit this recipe.")
         return redirect("recipe_detail", slug=self.get_object().slug)
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        if self.request.method == "POST":
+            ctx["ingredient_formset"] = RecipeIngredientFormSet(self.request.POST, instance=self.object)
+        else:
+            ctx["ingredient_formset"] = RecipeIngredientFormSet(instance=self.object)
+        return ctx
+
     def form_valid(self, form):
-        messages.success(self.request, "Recipe updated successfully.")
-        return super().form_valid(form)
+        self.object = form.save()  # author is unchanged here
+        formset = RecipeIngredientFormSet(self.request.POST, instance=self.object)
+        if formset.is_valid():
+            formset.save()
+            messages.success(self.request, "Recipe updated successfully.")
+            return redirect(self.object.get_absolute_url())
+        return self.render_to_response(self.get_context_data(form=form, ingredient_formset=formset))
+
 
 
 class RecipeDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
@@ -258,3 +292,17 @@ class CategoryCreateView(LoginRequiredMixin, StaffRequiredMixin, CreateView):
         messages.success(self.request, "Category created successfully.")
         return super().form_valid(form)
 
+
+class IngredientCreateView(LoginRequiredMixin, CreateView):
+    model = Ingredient
+    form_class = IngredientForm
+    template_name = "recipes/ingredient_form.html"
+
+    def form_valid(self, form):
+        messages.success(self.request, "Ingredient created.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        # If the user came from a recipe form, send them back there
+        nxt = self.request.GET.get("next") or self.request.POST.get("next")
+        return nxt or reverse_lazy("recipe_list")

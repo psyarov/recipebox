@@ -2,8 +2,10 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.forms import ModelForm
-from .models import Recipe, Comment, Category
+from .models import Recipe, Comment, Category, RecipeIngredient, Ingredient
 from django.utils.text import slugify
+
+from django.forms import inlineformset_factory
 
 
 class RegisterForm(UserCreationForm):
@@ -46,3 +48,16 @@ class CategoryForm(forms.ModelForm):
             raise forms.ValidationError("Slug cannot be empty.")
         return slug
 
+
+RecipeIngredientFormSet = inlineformset_factory(
+    parent_model=Recipe,
+    model=RecipeIngredient,
+    fields=("ingredient", "quantity", "unit"),
+    extra=1,            # show one empty row by default
+    can_delete=True,    # allow removing rows
+)
+
+class IngredientForm(forms.ModelForm):
+    class Meta:
+        model = Ingredient
+        fields = ["name", "is_allergen"]
