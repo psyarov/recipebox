@@ -5,7 +5,7 @@
     <header class="mb-3">
       <h2 class="mb-1">{{ recipe.title }}</h2>
       <div class="text-muted">
-        {% if recipe.category %}Category: {{ recipe.category.name }} · {% endif %}
+        {% if recipe.category %}Category: <a href="{{ recipe.category.get_absolute_url }}">{{ recipe.category.name }}</a> · {% endif %}
         by {{ recipe.author.username }} · {{ recipe.prep_time_minutes }} min
       </div>
     </header>

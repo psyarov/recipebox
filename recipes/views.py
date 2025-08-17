@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth import login
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic import ListView, DetailView
 
 from .forms import RegisterForm, RecipeForm, CommentForm
@@ -16,6 +16,8 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect
 
 from django.contrib.auth.decorators import login_required
+
+
 
 
 
@@ -202,3 +204,24 @@ class DashboardView(LoginRequiredMixin, ListView):
         # add user's comments to the context so the template can render them
         context["comments"] = Comment.objects.filter(author=self.request.user).select_related("recipe")
         return context
+
+class CategoryDetailView(ListView):
+    model = Recipe
+    template_name = "recipes/category_detail.html"
+    context_object_name = "recipes"
+    paginate_by = 10
+
+    def get_queryset(self):
+        self.category = get_object_or_404(Category, slug=self.kwargs["slug"])
+        return (
+            Recipe.objects
+            .filter(category=self.category)
+            .select_related("author", "category")
+            .order_by("-created_at")
+        )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["category"] = self.category
+        return ctx
+

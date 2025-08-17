@@ -44,6 +44,10 @@ urlpatterns = [
 
     path("dashboard/", DashboardView.as_view(), name="dashboard"),
 
+    path("categories/", views.CategoryListView.as_view(), name="category_list"),
+    path("categories/<slug:slug>/", views.CategoryDetailView.as_view(), name="category_detail"),
+
+
 ]
 
 
